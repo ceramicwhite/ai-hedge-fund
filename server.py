@@ -23,6 +23,10 @@ def index():
     """Serve the React app."""
     return app.send_static_file('index.html')
 
+@app.route('/hello')
+def hello():
+    return "Hello, the server is working!"
+
 @app.route('/api/run-hedge-fund', methods=['POST'])
 def api_run_hedge_fund():
     """Run the hedge fund with specified parameters."""

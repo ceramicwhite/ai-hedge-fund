@@ -5,7 +5,7 @@ services:
     #   context: .
     #   dockerfile: Dockerfile
     ports:
-      - "6000:5000"
+      - "8000:5000"
     volumes:
       # Mount these directories to persist data and enable hot reloading during development
       # - ./src:/app/src

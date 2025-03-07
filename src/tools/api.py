@@ -1,9 +1,10 @@
 import os
 import pandas as pd
 import requests
+from typing import List, Dict, Optional, Union, Any
 
-from data.cache import get_cache
-from data.models import (
+from src.data.cache import get_cache
+from src.data.models import (
     CompanyNews,
     CompanyNewsResponse,
     FinancialMetrics,
@@ -20,7 +21,7 @@ from data.models import (
 _cache = get_cache()
 
 
-def get_prices(ticker: str, start_date: str, end_date: str) -> list[Price]:
+def get_prices(ticker: str, start_date: str, end_date: str) -> List[Price]:
     """Fetch price data from cache or API."""
     # Check cache first
     if cached_data := _cache.get_prices(ticker):
@@ -56,7 +57,7 @@ def get_financial_metrics(
     end_date: str,
     period: str = "ttm",
     limit: int = 10,
-) -> list[FinancialMetrics]:
+) -> List[FinancialMetrics]:
     """Fetch financial metrics from cache or API."""
     # Check cache first
     if cached_data := _cache.get_financial_metrics(ticker):
@@ -91,11 +92,11 @@ def get_financial_metrics(
 
 def search_line_items(
     ticker: str,
-    line_items: list[str],
+    line_items: List[str],
     end_date: str,
     period: str = "ttm",
     limit: int = 10,
-) -> list[LineItem]:
+) -> List[LineItem]:
     """Fetch line items from API."""
     # If not in cache or insufficient data, fetch from API
     headers = {}
@@ -127,9 +128,9 @@ def search_line_items(
 def get_insider_trades(
     ticker: str,
     end_date: str,
-    start_date: str | None = None,
+    start_date: Optional[str] = None,
     limit: int = 1000,
-) -> list[InsiderTrade]:
+) -> List[InsiderTrade]:
     """Fetch insider trades from cache or API."""
     # Check cache first
     if cached_data := _cache.get_insider_trades(ticker):
@@ -190,9 +191,9 @@ def get_insider_trades(
 def get_company_news(
     ticker: str,
     end_date: str,
-    start_date: str | None = None,
+    start_date: Optional[str] = None,
     limit: int = 1000,
-) -> list[CompanyNews]:
+) -> List[CompanyNews]:
     """Fetch company news from cache or API."""
     # Check cache first
     if cached_data := _cache.get_company_news(ticker):
@@ -254,7 +255,7 @@ def get_company_news(
 def get_market_cap(
     ticker: str,
     end_date: str,
-) -> float | None:
+) -> Optional[float]:
     """Fetch market cap from the API."""
     financial_metrics = get_financial_metrics(ticker, end_date)
     market_cap = financial_metrics[0].market_cap
@@ -264,7 +265,7 @@ def get_market_cap(
     return market_cap
 
 
-def prices_to_df(prices: list[Price]) -> pd.DataFrame:
+def prices_to_df(prices: List[Price]) -> pd.DataFrame:
     """Convert prices to a DataFrame."""
     df = pd.DataFrame([p.model_dump() for p in prices])
     df["Date"] = pd.to_datetime(df["time"])

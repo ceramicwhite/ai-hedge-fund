@@ -3,7 +3,7 @@
 import json
 from typing import TypeVar, Type, Optional, Any
 from pydantic import BaseModel
-from utils.progress import progress
+from src.utils.progress import progress
 
 T = TypeVar('T', bound=BaseModel)
 

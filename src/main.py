@@ -5,26 +5,27 @@ from langchain_core.messages import HumanMessage
 from langgraph.graph import END, StateGraph
 from colorama import Fore, Back, Style, init
 import questionary
-from agents.ben_graham import ben_graham_agent
-from agents.bill_ackman import bill_ackman_agent
-from agents.fundamentals import fundamentals_agent
-from agents.portfolio_manager import portfolio_management_agent
-from agents.technicals import technical_analyst_agent
-from agents.risk_manager import risk_management_agent
-from agents.sentiment import sentiment_agent
-from agents.warren_buffett import warren_buffett_agent
-from graph.state import AgentState
-from agents.valuation import valuation_agent
-from utils.display import print_trading_output
-from utils.analysts import ANALYST_ORDER, get_analyst_nodes
-from utils.progress import progress
-from llm.models import LLM_ORDER, get_model_info
+import os
+from src.agents.ben_graham import ben_graham_agent
+from src.agents.bill_ackman import bill_ackman_agent
+from src.agents.fundamentals import fundamentals_agent
+from src.agents.portfolio_manager import portfolio_management_agent
+from src.agents.technicals import technical_analyst_agent
+from src.agents.risk_manager import risk_management_agent
+from src.agents.sentiment import sentiment_agent
+from src.agents.warren_buffett import warren_buffett_agent
+from src.graph.state import AgentState
+from src.agents.valuation import valuation_agent
+from src.utils.display import print_trading_output
+from src.utils.analysts import ANALYST_ORDER, get_analyst_nodes
+from src.utils.progress import progress
+from src.llm.models import LLM_ORDER, get_model_info
 
 import argparse
 from datetime import datetime
 from dateutil.relativedelta import relativedelta
 from tabulate import tabulate
-from utils.visualize import save_graph_as_png
+from src.utils.visualize import save_graph_as_png
 
 # Load environment variables from .env file
 load_dotenv()
@@ -188,9 +189,12 @@ if __name__ == "__main__":
         selected_analysts = choices
         print(f"\nSelected analysts: {', '.join(Fore.GREEN + choice.title().replace('_', ' ') + Style.RESET_ALL for choice in choices)}\n")
 
+    # Check if OPENAI_MODEL is set for OpenAI models
+    openai_model_override = os.getenv("OPENAI_MODEL")
+    
     # Select LLM model
     model_choice = questionary.select(
-        "Select your LLM model:",
+        "Select your LLM model:" + (" (can be overridden by OPENAI_MODEL)" if openai_model_override else ""),
         choices=[questionary.Choice(display, value=value) for display, value, _ in LLM_ORDER],
         style=questionary.Style([
             ("selected", "fg:green bold"),

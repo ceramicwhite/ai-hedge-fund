@@ -4,7 +4,7 @@ from langchain_groq import ChatGroq
 from langchain_openai import ChatOpenAI
 from enum import Enum
 from pydantic import BaseModel
-from typing import Tuple
+from typing import Tuple, Optional, Union
 
 
 class ModelProvider(str, Enum):
@@ -81,11 +81,11 @@ AVAILABLE_MODELS = [
 # Create LLM_ORDER in the format expected by the UI
 LLM_ORDER = [model.to_choice_tuple() for model in AVAILABLE_MODELS]
 
-def get_model_info(model_name: str) -> LLMModel | None:
+def get_model_info(model_name: str) -> Optional[LLMModel]:
     """Get model information by model_name"""
     return next((model for model in AVAILABLE_MODELS if model.model_name == model_name), None)
 
-def get_model(model_name: str, model_provider: ModelProvider) -> ChatOpenAI | ChatGroq | None:
+def get_model(model_name: str, model_provider: ModelProvider) -> Union[ChatOpenAI, ChatGroq, ChatAnthropic, None]:
     if model_provider == ModelProvider.GROQ:
         api_key = os.getenv("GROQ_API_KEY")
         if not api_key:
@@ -100,7 +100,20 @@ def get_model(model_name: str, model_provider: ModelProvider) -> ChatOpenAI | Ch
             # Print error to console
             print(f"API Key Error: Please make sure OPENAI_API_KEY is set in your .env file.")
             raise ValueError("OpenAI API key not found.  Please make sure OPENAI_API_KEY is set in your .env file.")
-        return ChatOpenAI(model=model_name, api_key=api_key)
+        
+        # Get custom base URL if provided
+        base_url = os.getenv("OPENAI_BASE_URL")
+        
+        # Check for model override from environment
+        env_model = os.getenv("OPENAI_MODEL")
+        # Use environment model if provided, otherwise use the selected model
+        actual_model = env_model if env_model else model_name
+        
+        # Create client with base_url if provided
+        if base_url:
+            return ChatOpenAI(model=actual_model, api_key=api_key, base_url=base_url)
+        else:
+            return ChatOpenAI(model=actual_model, api_key=api_key)
     elif model_provider == ModelProvider.ANTHROPIC:
         api_key = os.getenv("ANTHROPIC_API_KEY")
         if not api_key:

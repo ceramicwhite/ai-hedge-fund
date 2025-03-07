@@ -1,0 +1,21 @@
+services:
+  ai-hedge-fund:
+    image: ceramicwhite/ai-hedge-fund:latest
+    # build: 
+    #   context: .
+    #   dockerfile: Dockerfile
+    ports:
+      - "6000:5000"
+    volumes:
+      # Mount these directories to persist data and enable hot reloading during development
+      # - ./src:/app/src
+      # - ./frontend/src:/app/frontend/src
+      - ./.env:/app/.env
+    environment:
+      - FLASK_ENV=development
+      # You can override API keys here or use the .env file
+      # - OPENAI_API_KEY=${OPENAI_API_KEY}
+      # - ANTHROPIC_API_KEY=${ANTHROPIC_API_KEY}
+      # - GROQ_API_KEY=${GROQ_API_KEY}
+      # - FINANCIAL_DATASETS_API_KEY=${FINANCIAL_DATASETS_API_KEY}
+    restart: unless-stopped

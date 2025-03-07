@@ -42,5 +42,4 @@ Thumbs.db
 *.png
 
 # Txt files
-*.txt
 /.venv

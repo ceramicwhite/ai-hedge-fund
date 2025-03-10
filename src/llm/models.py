@@ -8,11 +8,13 @@ from enum import Enum
 from pydantic import BaseModel
 from typing import Tuple, List
 
+# Module-level flags to track whether certain messages have been printed
+_openrouter_config_logged = False
+
 def are_openrouter_env_vars_set():
     """Check if OpenRouter environment variables are set."""
     api_key = os.getenv("OPENROUTER_API_KEY")
     model = os.getenv("OPENROUTER_MODEL")
-    print(f"DEBUG: Checking OpenRouter env vars - API Key: {'FOUND' if api_key else 'NOT FOUND'}, Model: {'FOUND' if model else 'NOT FOUND'}")
     return bool(api_key) and bool(model)
 
 
@@ -117,19 +119,13 @@ BASE_MODELS = [
 # Function to get available models dynamically (including OpenRouter if configured)
 def get_available_models() -> List[LLMModel]:
     """Get all available models, including dynamic ones from environment variables."""
-    print("\n=== Starting get_available_models() ===")
     all_models = BASE_MODELS.copy()
-    print(f"Base models loaded: {len(BASE_MODELS)} models")
     
     # Add OpenRouter models if environment variables are set
-    print("Checking for OpenRouter environment variables...")
     openrouter_api_key = os.getenv("OPENROUTER_API_KEY", "")
     openrouter_model = os.getenv("OPENROUTER_MODEL", "")
-    print(f"OPENROUTER_API_KEY: {'Set (length: ' + str(len(openrouter_api_key)) + ')' if openrouter_api_key else 'NOT SET'}")
-    print(f"OPENROUTER_MODEL: {openrouter_model if openrouter_model else 'NOT SET'}")
     
     if openrouter_api_key and openrouter_model:
-        print(f"OpenRouter environment variables found. Adding model: {openrouter_model}")
         # Extract a display name from the model
         display_name = openrouter_model
         if "/" in openrouter_model:
@@ -142,12 +138,7 @@ def get_available_models() -> List[LLMModel]:
             provider=ModelProvider.OPENROUTER
         )
         all_models.append(openrouter_model_obj)
-        print(f"Added OpenRouter model: {openrouter_model} to available models")
-        print(f"Total models now: {len(all_models)}")
-    else:
-        print("OpenRouter environment variables not properly set. Skipping...")
     
-    print("=== Finished get_available_models() ===\n")
     return all_models
 
 # Get models on demand rather than at module load time
@@ -173,8 +164,6 @@ def get_model(model_name: str, model_provider: ModelProvider) -> ChatOpenAI | Ch
         if not api_key:
             print(f"API Key Error: Please make sure OPENROUTER_API_KEY is set in your .env file.")
             raise ValueError("OpenRouter API key not found. Please make sure OPENROUTER_API_KEY is set in your .env file.")
-            
-        print(f"Configuring OpenRouter with model: {model_name}")
         
         # OpenRouter uses the OpenAI client but with specific configuration
         return ChatOpenAI(

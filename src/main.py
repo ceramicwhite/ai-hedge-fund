@@ -30,14 +30,6 @@ import json
 # Load environment variables from .env file
 load_dotenv()
 
-# Print environment variables for debugging
-print("\nEnvironment Variable Status:")
-print(f"OPENROUTER_API_KEY: {'SET' if os.getenv('OPENROUTER_API_KEY') else 'NOT SET'}")
-print(f"OPENROUTER_MODEL: {'SET' if os.getenv('OPENROUTER_MODEL') else 'NOT SET'}")
-print(f"OPENAI_API_KEY: {'SET' if os.getenv('OPENAI_API_KEY') else 'NOT SET'}")
-print(f"OPENAI_BASE_URL: {'SET' if os.getenv('OPENAI_BASE_URL') else 'NOT SET'}")
-print(f"OPENAI_MODEL: {'SET' if os.getenv('OPENAI_MODEL') else 'NOT SET'}\n")
-
 init(autoreset=True)
 
 

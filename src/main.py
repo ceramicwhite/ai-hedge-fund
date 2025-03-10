@@ -1,3 +1,4 @@
+import os
 import sys
 
 from dotenv import load_dotenv
@@ -18,7 +19,7 @@ from agents.valuation import valuation_agent
 from utils.display import print_trading_output
 from utils.analysts import ANALYST_ORDER, get_analyst_nodes
 from utils.progress import progress
-from llm.models import LLM_ORDER, get_model_info
+from llm.models import get_llm_order, get_model_info
 
 import argparse
 from datetime import datetime
@@ -26,11 +27,24 @@ from dateutil.relativedelta import relativedelta
 from tabulate import tabulate
 from utils.visualize import save_graph_as_png
 import json
-
 # Load environment variables from .env file
 load_dotenv()
 
+# Print environment variables for debugging
+print("\nEnvironment Variable Status:")
+print(f"OPENROUTER_API_KEY: {'SET' if os.getenv('OPENROUTER_API_KEY') else 'NOT SET'}")
+print(f"OPENROUTER_MODEL: {'SET' if os.getenv('OPENROUTER_MODEL') else 'NOT SET'}")
+print(f"OPENAI_API_KEY: {'SET' if os.getenv('OPENAI_API_KEY') else 'NOT SET'}")
+print(f"OPENAI_BASE_URL: {'SET' if os.getenv('OPENAI_BASE_URL') else 'NOT SET'}")
+print(f"OPENAI_MODEL: {'SET' if os.getenv('OPENAI_MODEL') else 'NOT SET'}\n")
+
 init(autoreset=True)
+
+
+def are_openai_env_vars_set():
+    """Check if both OPENAI_BASE_URL and OPENAI_MODEL environment variables are set."""
+    return bool(os.getenv("OPENAI_BASE_URL")) and bool(os.getenv("OPENAI_MODEL"))
+
 
 
 def parse_hedge_fund_response(response):
@@ -195,30 +209,51 @@ if __name__ == "__main__":
         selected_analysts = choices
         print(f"\nSelected analysts: {', '.join(Fore.GREEN + choice.title().replace('_', ' ') + Style.RESET_ALL for choice in choices)}\n")
 
-    # Select LLM model
-    model_choice = questionary.select(
-        "Select your LLM model:",
-        choices=[questionary.Choice(display, value=value) for display, value, _ in LLM_ORDER],
-        style=questionary.Style([
-            ("selected", "fg:green bold"),
-            ("pointer", "fg:green bold"),
-            ("highlighted", "fg:green"),
-            ("answer", "fg:green bold"),
-        ])
-    ).ask()
-
-    if not model_choice:
-        print("\n\nInterrupt received. Exiting...")
-        sys.exit(0)
+    # Check if OpenRouter environment variables are set
+    openrouter_api_key = os.getenv("OPENROUTER_API_KEY")
+    openrouter_model = os.getenv("OPENROUTER_MODEL")
+    if openrouter_api_key and openrouter_model:
+        print(f"\nUsing model from environment variables: {Fore.CYAN}OpenRouter{Style.RESET_ALL} with model: {Fore.GREEN + Style.BRIGHT}{openrouter_model}{Style.RESET_ALL}\n")
+        
+        # We're using OpenRouter as the provider with the model from environment variables
+        model_choice = openrouter_model
+        model_provider = "OpenRouter"
+    # Check if OpenAI environment variables are set
+    elif are_openai_env_vars_set():
+        model_override = os.getenv("OPENAI_MODEL")
+        print(f"\nUsing model from environment variables: {Fore.CYAN}OpenAI{Style.RESET_ALL} with model: {Fore.GREEN + Style.BRIGHT}{model_override}{Style.RESET_ALL}\n")
+        
+        # We're using OpenAI as the provider with the model from environment variables
+        model_choice = model_override
+        model_provider = "OpenAI"
     else:
-        # Get model info using the helper function
-        model_info = get_model_info(model_choice)
-        if model_info:
-            model_provider = model_info.provider.value
-            print(f"\nSelected {Fore.CYAN}{model_provider}{Style.RESET_ALL} model: {Fore.GREEN + Style.BRIGHT}{model_choice}{Style.RESET_ALL}\n")
+        # Get current LLM options, which dynamically includes OpenRouter if configured
+        llm_order = get_llm_order()
+        
+        # Original model selection code
+        model_choice = questionary.select(
+            "Select your LLM model:",
+            choices=[questionary.Choice(display, value=value) for display, value, _ in llm_order],
+            style=questionary.Style([
+                ("selected", "fg:green bold"),
+                ("pointer", "fg:green bold"),
+                ("highlighted", "fg:green"),
+                ("answer", "fg:green bold"),
+            ])
+        ).ask()
+
+        if not model_choice:
+            print("\n\nInterrupt received. Exiting...")
+            sys.exit(0)
         else:
-            model_provider = "Unknown"
-            print(f"\nSelected model: {Fore.GREEN + Style.BRIGHT}{model_choice}{Style.RESET_ALL}\n")
+            # Get model info using the helper function
+            model_info = get_model_info(model_choice)
+            if model_info:
+                model_provider = model_info.provider.value
+                print(f"\nSelected {Fore.CYAN}{model_provider}{Style.RESET_ALL} model: {Fore.GREEN + Style.BRIGHT}{model_choice}{Style.RESET_ALL}\n")
+            else:
+                model_provider = "Unknown"
+                print(f"\nSelected model: {Fore.GREEN + Style.BRIGHT}{model_choice}{Style.RESET_ALL}\n")
 
     # Create the workflow with selected analysts
     workflow = create_workflow(selected_analysts)

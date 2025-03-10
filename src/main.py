@@ -312,4 +312,12 @@ if __name__ == "__main__":
         model_name=model_choice,
         model_provider=model_provider,
     )
-    print_trading_output(result)
+    
+    # Print the trading output and capture it
+    output = print_trading_output(result)
+    
+    # Save the output to files for each ticker
+    decisions = result.get("decisions", {})
+    for ticker in decisions.keys():
+        from utils.display import save_output_to_file
+        save_output_to_file(ticker, output)

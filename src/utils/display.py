@@ -2,6 +2,17 @@ from colorama import Fore, Style
 from tabulate import tabulate
 from .analysts import ANALYST_ORDER
 import os
+import io
+import re
+import sys
+from pathlib import Path
+from datetime import datetime
+
+
+def strip_ansi_codes(text):
+    """Remove ANSI color codes for writing to plain text files."""
+    ansi_escape = re.compile(r'\x1B(?:[@-Z\\-_]|\[[0-?]*[ -/]*[@-~])')
+    return ansi_escape.sub('', text)
 
 
 def sort_analyst_signals(signals):
@@ -13,9 +24,90 @@ def sort_analyst_signals(signals):
     return sorted(signals, key=lambda x: analyst_order.get(x[0], 999))
 
 
+def ensure_report_directory(ticker):
+    """
+    Ensure that the report directory exists for a given ticker.
+    
+    Args:
+        ticker (str): The ticker symbol
+        
+    Returns:
+        Path: Path object pointing to the report directory
+    """
+    report_dir = Path(f"./data/{ticker}/reports")
+    report_dir.mkdir(parents=True, exist_ok=True)
+    return report_dir
+
+def save_output_to_file(ticker, content):
+    """
+    Save content to a dated log file in the ticker's reports directory.
+    
+    Args:
+        ticker (str): The ticker symbol
+        content (str): The content to save (without ANSI color codes)
+    """
+    report_dir = ensure_report_directory(ticker)
+    
+    # Generate filename with current date and time
+    timestamp = datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
+    filename = f"{timestamp}.txt"
+    file_path = report_dir / filename
+    
+    # Remove ANSI color codes for clean log files
+    clean_content = strip_ansi_codes(content)
+    
+    # Write to file
+    with open(file_path, 'w') as f:
+        f.write(clean_content)
+    
+    print(f"\nLog saved to: {file_path}")
+
+def capture_output(func):
+    """
+    Decorator to capture the output of a function while still printing to console.
+    
+    Args:
+        func: The function to capture output from
+        
+    Returns:
+        String containing the captured output
+    """
+    def wrapper(*args, **kwargs):
+        # Save original stdout
+        original_stdout = sys.stdout
+        
+        # Create a StringIO object to capture output
+        captured_output = io.StringIO()
+        
+        try:
+            # Replace stdout with our capture object
+            sys.stdout = captured_output
+            
+            # Call the original function
+            func(*args, **kwargs)
+            
+            # Get the captured output
+            output = captured_output.getvalue()
+            
+            # Return to original stdout
+            sys.stdout = original_stdout
+            
+            # Print the output to the console
+            print(output, end='')
+            
+            return output
+        finally:
+            # Make sure we restore stdout even if there's an exception
+            sys.stdout = original_stdout
+            captured_output.close()
+    
+    return wrapper
+
+@capture_output
 def print_trading_output(result: dict) -> None:
     """
     Print formatted trading results with colored tables for multiple tickers.
+    Output is also saved to log files in ./data/<ticker>/reports/.
 
     Args:
         result (dict): Dictionary containing decisions and analyst signals for multiple tickers
@@ -25,6 +117,10 @@ def print_trading_output(result: dict) -> None:
         print(f"{Fore.RED}No trading decisions available{Style.RESET_ALL}")
         return
 
+    # Store the run timestamp for logging
+    run_timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+    print(f"\n{Fore.WHITE}{Style.BRIGHT}AI Hedge Fund Analysis - {run_timestamp}{Style.RESET_ALL}")
+    
     # Print decisions for each ticker
     for ticker, decision in decisions.items():
         print(f"\n{Fore.WHITE}{Style.BRIGHT}Analysis for {Fore.CYAN}{ticker}{Style.RESET_ALL}")

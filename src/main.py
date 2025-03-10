@@ -102,6 +102,7 @@ def run_hedge_fund(
         return {
             "decisions": parse_hedge_fund_response(final_state["messages"][-1].content),
             "analyst_signals": final_state["data"]["analyst_signals"],
+            "model_name": f"{model_provider}/{model_name}"
         }
     finally:
         # Stop progress tracking

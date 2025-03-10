@@ -117,9 +117,10 @@ def print_trading_output(result: dict) -> None:
         print(f"{Fore.RED}No trading decisions available{Style.RESET_ALL}")
         return
 
-    # Store the run timestamp for logging
+    # Get the model information and run timestamp for logging
+    model_name = result.get("model_name", "Unknown model")
     run_timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-    print(f"\n{Fore.WHITE}{Style.BRIGHT}AI Hedge Fund Analysis - {run_timestamp}{Style.RESET_ALL}")
+    print(f"\n{Fore.WHITE}{Style.BRIGHT}AI Hedge Fund Analysis - {run_timestamp} - {model_name}{Style.RESET_ALL}")
     
     # Print decisions for each ticker
     for ticker, decision in decisions.items():

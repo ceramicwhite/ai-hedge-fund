@@ -72,8 +72,11 @@ def test_logging():
         }
     }
     
+    # Mock model information
+    model_name = "anthropic/claude-3.7-sonnet:thinking"
+    
     # Generate simple output
-    output = f"AI Hedge Fund Analysis - {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}\n\n"
+    output = f"AI Hedge Fund Analysis - {datetime.now().strftime('%Y-%m-%d %H:%M:%S')} - {model_name}\n\n"
     
     for ticker, decision in mock_result.items():
         output += f"\nAnalysis for {ticker}\n"

@@ -2,8 +2,8 @@ import os
 import pandas as pd
 import requests
 
-from data.cache import get_cache
-from data.models import (
+from src.data.cache import get_cache
+from src.data.models import (
     CompanyNews,
     CompanyNewsResponse,
     FinancialMetrics,
@@ -96,7 +96,14 @@ def search_line_items(
     period: str = "ttm",
     limit: int = 10,
 ) -> list[LineItem]:
-    """Fetch line items from API."""
+    """Fetch line items from cache or API."""
+    # Check cache first
+    if cached_data := _cache.get_line_items(ticker, line_items, end_date, period):
+        # Convert cached data to LineItem objects
+        filtered_data = [LineItem(**item) for item in cached_data]
+        if filtered_data:
+            return filtered_data[:limit]
+
     # If not in cache or insufficient data, fetch from API
     headers = {}
     if api_key := os.environ.get("FINANCIAL_DATASETS_API_KEY"):
@@ -121,6 +128,14 @@ def search_line_items(
         return []
 
     # Cache the results
+    _cache.set_line_items(
+        ticker,
+        line_items,
+        end_date,
+        period,
+        [result.model_dump() for result in search_results]
+    )
+    
     return search_results[:limit]
 
 

@@ -1,0 +1,142 @@
+/* Main styles for AI Hedge Fund Gradio UI */
+
+/* Custom colors matching the CLI version */
+:root {
+  --color-green: #00FF00;
+  --color-red: #FF0000;
+  --color-yellow: #FFFF00;
+  --color-cyan: #00FFFF;
+  --color-white: #FFFFFF;
+  --color-blue: #0000FF;
+  --color-bg-dark: #1E1E1E;
+  --color-bg-light: #2D2D2D;
+  --color-border: #3E3E3E;
+}
+
+/* Header styling */
+h1, h2, h3 {
+  text-align: center;
+  margin-bottom: 20px;
+}
+
+/* Custom table styling */
+table {
+  width: 100%;
+  border-collapse: collapse;
+  margin: 15px 0;
+}
+
+th {
+  background-color: var(--color-bg-dark);
+  color: var(--color-white);
+  padding: 8px;
+  text-align: left;
+  border: 1px solid var(--color-border);
+}
+
+td {
+  padding: 8px;
+  border: 1px solid var(--color-border);
+}
+
+/* Signal and action colors */
+.bullish, .buy, .cover {
+  color: var(--color-green) !important;
+}
+
+.bearish, .sell, .short {
+  color: var(--color-red) !important;
+}
+
+.neutral, .hold {
+  color: var(--color-yellow) !important;
+}
+
+/* Custom button styling */
+button.primary {
+  background-color: var(--color-cyan);
+  color: var(--color-bg-dark);
+  border: none;
+  padding: 10px 15px;
+  border-radius: 4px;
+  cursor: pointer;
+  font-weight: bold;
+}
+
+button.primary:hover {
+  opacity: 0.8;
+}
+
+/* Checkbox styling */
+.checkbox-selected {
+  color: var(--color-green);
+}
+
+/* Chart containers */
+.chart-container {
+  height: 400px;
+  margin: 20px 0;
+}
+
+/* Tab styling */
+.tab-nav button.selected {
+  background-color: var(--color-cyan);
+  color: var(--color-bg-dark);
+}
+
+/* Input container */
+.input-container {
+  padding: 15px;
+  background-color: var(--color-bg-light);
+  border-radius: 4px;
+  margin-bottom: 15px;
+}
+
+/* Results container */
+.results-container {
+  padding: 15px;
+  background-color: var(--color-bg-light);
+  border-radius: 4px;
+}
+
+/* Loading indicator */
+.loading {
+  text-align: center;
+  padding: 20px;
+}
+
+/* Tooltip styling */
+.tooltip {
+  position: relative;
+  display: inline-block;
+  cursor: help;
+}
+
+.tooltip .tooltip-text {
+  visibility: hidden;
+  width: 200px;
+  background-color: var(--color-bg-dark);
+  color: var(--color-white);
+  text-align: center;
+  border-radius: 6px;
+  padding: 5px;
+  position: absolute;
+  z-index: 1;
+  bottom: 125%;
+  left: 50%;
+  margin-left: -100px;
+  opacity: 0;
+  transition: opacity 0.3s;
+}
+
+.tooltip:hover .tooltip-text {
+  visibility: visible;
+  opacity: 1;
+}
+
+/* Responsive adjustments */
+@media (max-width: 768px) {
+  .chart-container {
+    height: 300px;
+  }
+}

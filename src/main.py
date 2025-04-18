@@ -3,23 +3,31 @@ import sys
 from dotenv import load_dotenv
 from langchain_core.messages import HumanMessage
 from langgraph.graph import END, StateGraph
-from colorama import Fore, Back, Style, init
+from colorama import Fore, Style, init
 import questionary
+# Combined imports, preferring absolute paths and including upstream additions
 import os
 from src.agents.ben_graham import ben_graham_agent
 from src.agents.bill_ackman import bill_ackman_agent
+from src.agents.cathie_wood import cathie_wood_agent # Added missing agent
+from src.agents.charlie_munger import charlie_munger_agent # Added missing agent
 from src.agents.fundamentals import fundamentals_agent
+from src.agents.michael_burry import michael_burry_agent # Added missing agent
+from src.agents.peter_lynch import peter_lynch_agent # Added missing agent
+from src.agents.phil_fisher import phil_fisher_agent # Added missing agent
 from src.agents.portfolio_manager import portfolio_management_agent
-from src.agents.technicals import technical_analyst_agent
 from src.agents.risk_manager import risk_management_agent
 from src.agents.sentiment import sentiment_agent
+from src.agents.stanley_druckenmiller import stanley_druckenmiller_agent # Added missing agent
+from src.agents.technicals import technical_analyst_agent
+from src.agents.valuation import valuation_agent
 from src.agents.warren_buffett import warren_buffett_agent
 from src.graph.state import AgentState
-from src.agents.valuation import valuation_agent
 from src.utils.display import print_trading_output
 from src.utils.analysts import ANALYST_ORDER, get_analyst_nodes
 from src.utils.progress import progress
-from src.llm.models import LLM_ORDER, get_model_info
+from src.llm.models import LLM_ORDER, OLLAMA_LLM_ORDER, get_model_info, ModelProvider
+from src.utils.ollama import ensure_ollama_and_model
 
 import argparse
 from datetime import datetime
@@ -166,6 +174,9 @@ if __name__ == "__main__":
     parser.add_argument(
         "--show-agent-graph", action="store_true", help="Show the agent graph"
     )
+    parser.add_argument(
+        "--ollama", action="store_true", help="Use Ollama for local LLM inference"
+    )
 
     args = parser.parse_args()
 
@@ -196,33 +207,61 @@ if __name__ == "__main__":
         selected_analysts = choices
         print(f"\nSelected analysts: {', '.join(Fore.GREEN + choice.title().replace('_', ' ') + Style.RESET_ALL for choice in choices)}\n")
 
-    # Check if OPENAI_MODEL is set for OpenAI models
-    openai_model_override = os.getenv("OPENAI_MODEL")
-    
-    # Select LLM model
-    model_choice = questionary.select(
-        "Select your LLM model:" + (" (can be overridden by OPENAI_MODEL)" if openai_model_override else ""),
-        choices=[questionary.Choice(display, value=value) for display, value, _ in LLM_ORDER],
-        style=questionary.Style([
-            ("selected", "fg:green bold"),
-            ("pointer", "fg:green bold"),
-            ("highlighted", "fg:green"),
-            ("answer", "fg:green bold"),
-        ])
-    ).ask()
+    # Select LLM model based on whether Ollama is being used
+    model_choice = None
+    model_provider = None
 
-    if not model_choice:
-        print("\n\nInterrupt received. Exiting...")
-        sys.exit(0)
+    if args.ollama:
+        print(f"{Fore.CYAN}Using Ollama for local LLM inference.{Style.RESET_ALL}")
+
+        # Select from Ollama-specific models
+        model_choice = questionary.select(
+            "Select your Ollama model:",
+            choices=[questionary.Choice(display, value=value) for display, value, _ in OLLAMA_LLM_ORDER],
+            style=questionary.Style([
+                ("selected", "fg:green bold"),
+                ("pointer", "fg:green bold"),
+                ("highlighted", "fg:green"),
+                ("answer", "fg:green bold"),
+            ])
+        ).ask()
+
+        if not model_choice:
+            print("\n\nInterrupt received. Exiting...")
+            sys.exit(0)
+
+        # Ensure Ollama is installed, running, and the model is available
+        if not ensure_ollama_and_model(model_choice):
+            print(f"{Fore.RED}Cannot proceed without Ollama and the selected model.{Style.RESET_ALL}")
+            sys.exit(1)
+
+        model_provider = ModelProvider.OLLAMA.value
+        print(f"\nSelected {Fore.CYAN}Ollama{Style.RESET_ALL} model: {Fore.GREEN + Style.BRIGHT}{model_choice}{Style.RESET_ALL}\n")
     else:
-        # Get model info using the helper function
-        model_info = get_model_info(model_choice)
-        if model_info:
-            model_provider = model_info.provider.value
-            print(f"\nSelected {Fore.CYAN}{model_provider}{Style.RESET_ALL} model: {Fore.GREEN + Style.BRIGHT}{model_choice}{Style.RESET_ALL}\n")
+        # Use the standard cloud-based LLM selection
+        model_choice = questionary.select(
+            "Select your LLM model:",
+            choices=[questionary.Choice(display, value=value) for display, value, _ in LLM_ORDER],
+            style=questionary.Style([
+                ("selected", "fg:green bold"),
+                ("pointer", "fg:green bold"),
+                ("highlighted", "fg:green"),
+                ("answer", "fg:green bold"),
+            ])
+        ).ask()
+
+        if not model_choice:
+            print("\n\nInterrupt received. Exiting...")
+            sys.exit(0)
         else:
-            model_provider = "Unknown"
-            print(f"\nSelected model: {Fore.GREEN + Style.BRIGHT}{model_choice}{Style.RESET_ALL}\n")
+            # Get model info using the helper function
+            model_info = get_model_info(model_choice)
+            if model_info:
+                model_provider = model_info.provider.value
+                print(f"\nSelected {Fore.CYAN}{model_provider}{Style.RESET_ALL} model: {Fore.GREEN + Style.BRIGHT}{model_choice}{Style.RESET_ALL}\n")
+            else:
+                model_provider = "Unknown"
+                print(f"\nSelected model: {Fore.GREEN + Style.BRIGHT}{model_choice}{Style.RESET_ALL}\n")
 
     # Create the workflow with selected analysts
     workflow = create_workflow(selected_analysts)
@@ -262,12 +301,14 @@ if __name__ == "__main__":
     portfolio = {
         "cash": args.initial_cash,  # Initial cash amount
         "margin_requirement": args.margin_requirement,  # Initial margin requirement
+        "margin_used": 0.0,  # total margin usage across all short positions
         "positions": {
             ticker: {
                 "long": 0,  # Number of shares held long
                 "short": 0,  # Number of shares held short
                 "long_cost_basis": 0.0,  # Average cost basis for long positions
                 "short_cost_basis": 0.0,  # Average price at which shares were sold short
+                "short_margin_used": 0.0,  # Dollars of margin used for this ticker's short
             } for ticker in tickers
         },
         "realized_gains": {
